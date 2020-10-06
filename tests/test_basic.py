@@ -1,14 +1,6 @@
 import flonb
 
 
-def test_callable_type():
-    @flonb.task_func()
-    def dummy_func():
-        pass
-
-    assert isinstance(dummy_func, flonb.Task)
-
-
 def test___call__():
     @flonb.task_func()
     def add(x, y):
@@ -43,29 +35,10 @@ def test_compute_with_dependency():
         return len(word)
 
     @flonb.task_func()
-    def increase_letter_count(x, letter_count=compute_letter_count):
-        return x + letter_count
+    def replicate_word(x, letter_count=compute_letter_count):
+        return letter_count * x
 
-    assert increase_letter_count.compute(x=5, word="cow") == 8
-
-
-def test_compute_with_multiple_dependency():
-    @flonb.task_func()
-    def compute_letter_count(word):
-        return len(word)
-
-    @flonb.task_func()
-    def compute_unique_letter_count(word):
-        return len(set(word))
-
-    @flonb.task_func()
-    def total_score(
-        unique_letter_count=compute_unique_letter_count,
-        letter_count=compute_letter_count,
-    ):
-        return unique_letter_count + letter_count
-
-    assert total_score.compute(word="banana") == 9
+    assert replicate_word.compute(x=5, word="cow") == "cowcowcow"
 
 
 def test_compute_with_dependency_chain():
@@ -78,14 +51,21 @@ def test_compute_with_dependency_chain():
         return len(set(word))
 
     @flonb.task_func()
-    def compute_total_score(
+    def compute_base_score(
         unique_letter_count=compute_unique_letter_count,
         letter_count=compute_letter_count,
     ):
         return unique_letter_count + letter_count
 
     @flonb.task_func()
-    def add_to_total_score(x, total_score=compute_total_score):
-        return x + total_score
+    def increase_letter_count_score(
+        letter_count_multiplier,
+        letter_count=compute_letter_count,
+        base_score=compute_base_score,
+    ):
+        return letter_count_multiplier * letter_count + base_score
 
-    assert add_to_total_score.compute(3, "banana") == 12
+    result = increase_letter_count_score.compute(
+        letter_count_multiplier=3, word="banana"
+    )
+    assert result == 12
