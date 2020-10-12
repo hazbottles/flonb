@@ -46,7 +46,10 @@ class TaskFunc:
 
         TaskFromTaskFunc.__name__ = f"{self.func.__name__}Task"
 
-        return TaskFromTaskFunc(params, cache_disk=self.cache_disk)
+        return TaskFromTaskFunc(params=params, cache_disk=self.cache_disk)
+
+    def compute(self, params):
+        return self.task(params).compute()
 
 
 def _replace_task_func_with_task(dynamic_deps, params):
@@ -67,4 +70,6 @@ def _replace_task_func_with_task(dynamic_deps, params):
     elif isinstance(deps, list):
         return [_replace_task_func_with_task(sub_dep, params) for sub_dep in deps]
     else:
-        raise NotImplementedError
+        raise NotImplementedError(
+            "Allowed types in dynamic deps are: flonb.TaskFunc; list; dict."
+        )

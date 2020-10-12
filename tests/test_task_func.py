@@ -12,3 +12,11 @@ def test_signature():
     parameters = list(inspect.signature(test_func).parameters.items())
     assert parameters[0][0] == "a"
     raise NotImplementedError
+
+
+def test_invalid_object_in_deps():
+    raise NotImplementedError
+
+
+def test___repr__(self):
+    raise NotImplementedError
