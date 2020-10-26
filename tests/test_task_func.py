@@ -14,6 +14,12 @@ def test_signature():
     raise NotImplementedError
 
 
+def test_partial():
+    # check signature
+    # check calling
+    raise NotImplementedError
+
+
 def test___repr__(self):
     raise NotImplementedError
 
@@ -22,9 +28,17 @@ def test_missing_deep_option_raises_error():
     raise NotImplementedError
 
 
+def test_missing_option_for_dynamic_dep():
+    raise NotImplementedError
+
+
 def test_superflous_option_raises_error():
     raise NotImplementedError
 
 
 def test_supplied_options_collision_with_partial_options():
+    raise NotImplementedError
+
+
+def test_task_func_raises_error_in_compute():
     raise NotImplementedError

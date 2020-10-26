@@ -22,10 +22,6 @@ def test_scaler_dep():
     assert exponify_by_z.compute(x=4, y=3, z=2, mode="multiply") == 144
 
 
-def test_partial():
-    raise NotImplementedError
-
-
 def test_list_deps():
     @flonb.task_func()
     def add_y(x, y):
@@ -33,20 +29,36 @@ def test_list_deps():
 
     @flonb.task_func()
     def collect(
-        container=lambda ys_range: [add_y.partial(y=y) for y in range(ys_range)]
-        + ["extra"],
+        container=lambda ys_range: ([add_y.partial(y=y) for y in range(ys_range)]),
     ):
         return container
 
-    # Note how we don't specify `y`!
-    assert collect.compute(x=3, ys_range=5) == [3, 4, 5, 6, 7, "extra"]
+    assert collect.compute(x=3, ys_range=5) == [3, 4, 5, 6, 7]
 
 
 def test_nested_list_deps():
-    raise NotImplementedError
+    @flonb.task_func()
+    def multiply(x, y):
+        return x * y
+
+    @flonb.task_func()
+    def collect(
+        container=lambda ys_range, xs_range: (
+            [
+                [multiply.partial(x=x, y=y + 2) for x in range(xs_range)]
+                for y in range(ys_range)
+            ]
+        ),
+    ):
+        return container
+
+    assert collect.compute(xs_range=3, ys_range=2) == [
+        [0 * 2, 1 * 2, 2 * 2],
+        [0 * 3, 1 * 3, 2 * 3],
+    ]
 
 
-@pytest.xfail()  # dicts are not parsed for tasks by dask - do we want to implement that on top?
+@pytest.mark.xfail  # dicts are not parsed for tasks by dask - do we want to implement that on top?
 def test_dict_deps():
     @flonb.task_func()
     def add_y(x, y):

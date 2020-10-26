@@ -23,9 +23,9 @@ class Task:
 
         shallow_option_names = []
         deps = {}
-        options_order = []
+        args_order = []
         for param_name, param_obj in inspect.signature(func).parameters.items():
-            options_order.append(param_name)
+            args_order.append(param_name)
             default_val = param_obj.default
             if isinstance(default_val, Task):
                 deps[param_name] = default_val
@@ -35,7 +35,7 @@ class Task:
             else:
                 shallow_option_names.append(param_name)
 
-        self.options_order = tuple(options_order)
+        self.args_order = tuple(args_order)
         self.deps = deps
         self.shallow_option_names = shallow_option_names
         self.__name__ = func.__name__
@@ -48,16 +48,15 @@ class Task:
 
     def graph(self, **options):
         graph = {}  # singleton that is built throughout recurive calls
-        used_options = _build_graph(self, options, graph)
+        used_options, key = _build_graph(self, options, graph)
 
         excess_options = set(options) - set(used_options)
         if excess_options:
             raise ValueError(f"Excess options supplied: {sorted(excess_options)}.")
-        return graph
+        return graph, key
 
     def compute(self, **options):
-        graph = self.graph(**options)
-        key = _get_graph_key(self, options)
+        graph, key = self.graph(**options)
         return dask.get(graph, key)
 
 
@@ -75,24 +74,24 @@ def _build_graph(task: Task, options: dict, graph: dict):
     s_expr = [task.func]
     used_options = {}
     available_options = {**options, **task.internal_options}
-    for opt in task.options_order:
+    for arg in task.args_order:
 
         # e.g. {("no_of_snowballs", "no_of_snowballs=10"): 10}
-        if opt in task.shallow_option_names:
+        if arg in task.shallow_option_names:
             # _add_option_to_s_expr_and_graph
-            opt_val = available_options[opt]
-            opt_graph_key = (opt, f"{opt}={opt_val}")
+            opt_val = available_options[arg]
+            opt_graph_key = (arg, f"{arg}={opt_val}")
             s_expr.append(opt_graph_key)
             if opt_graph_key not in graph:
                 graph[opt_graph_key] = opt_val
-            if opt not in task.internal_options:
-                used_options[opt] = opt_val
+            if arg not in task.internal_options:
+                used_options[arg] = opt_val
 
-        elif opt in task.deps:
+        elif arg in task.deps:
             # step through all the deps,
             # recursively calling `_build_graph` (the function we are in right now!)
             dep_used_options, dep_keys = _add_deps_to_graph(
-                task.deps[opt], available_options, graph
+                task.deps[arg], available_options, graph
             )
             s_expr.append(dep_keys)
             used_options.update(
@@ -104,12 +103,12 @@ def _build_graph(task: Task, options: dict, graph: dict):
             )
 
         else:
-            raise ValueError(f"Option '{opt}' unrecognised.")
+            raise RuntimeError(f"Internal Error - argument '{arg}' unconfigured.")
 
-    task_graph_key = _get_graph_key(task, used_options)
-    graph[task_graph_key] = tuple(s_expr)
+    graph_key = _get_graph_key(task, {**used_options, **task.internal_options})
+    graph[graph_key] = tuple(s_expr)
 
-    return used_options
+    return used_options, graph_key
 
 
 def _add_deps_to_graph(deps, options: dict, graph: dict):
@@ -118,12 +117,13 @@ def _add_deps_to_graph(deps, options: dict, graph: dict):
     Replaces Tasks in deps with their graph keys, to build the s-expression.
     """
     if isinstance(deps, Task):
-        used_options = _build_graph(deps, options, graph)
-        return used_options, _get_graph_key(deps, used_options)
+        return _build_graph(deps, options, graph)
     elif callable(deps):  # dynamic dep
-        dynamic_dep_arg_names = list(inspect.signature(deps).parameters)
-        deps = deps(**{opt: options[opt] for opt in dynamic_dep_arg_names})
-        return _add_deps_to_graph(deps, options, graph)
+        dynamic_dep_option_names = list(inspect.signature(deps).parameters)
+        deps = deps(**{opt: options[opt] for opt in dynamic_dep_option_names})
+        used_options, graph_key = _add_deps_to_graph(deps, options, graph)
+        used_options.update({k: options[k] for k in dynamic_dep_option_names})
+        return used_options, graph_key
     elif isinstance(deps, list):
         used_options = {}
         s_expr = []
