@@ -26,7 +26,7 @@ def test_compute():
     def add(x, y):
         return x + y
 
-    assert add.compute(3, 4) == 7
+    assert add.compute(x=3, y=4) == 7
 
 
 def test_compute_with_dependency():
@@ -35,10 +35,10 @@ def test_compute_with_dependency():
         return len(word)
 
     @flonb.task_func()
-    def replicate_word(x, letter_count=compute_letter_count):
+    def muliply_letter_count(x, letter_count=compute_letter_count):
         return letter_count * x
 
-    assert replicate_word.compute(x=5, word="cow") == "cowcowcow"
+    assert muliply_letter_count.compute(x=5, word="cow") == 15
 
 
 def test_compute_with_dependency_chain():
@@ -51,21 +51,44 @@ def test_compute_with_dependency_chain():
         return len(set(word))
 
     @flonb.task_func()
-    def compute_base_score(
-        unique_letter_count=compute_unique_letter_count,
-        letter_count=compute_letter_count,
-    ):
-        return unique_letter_count + letter_count
+    def compute_n_magic_letter(word, magic_letter):
+        n_magic_letter = 0
+        for letter in word:
+            if letter == magic_letter:
+                n_magic_letter += 1
+        return n_magic_letter
 
     @flonb.task_func()
-    def increase_letter_count_score(
-        letter_count_multiplier,
+    def compute_base_score(
+        combining_mode,
+        unique_letter_count=compute_unique_letter_count,
         letter_count=compute_letter_count,
+        n_magic_letter=compute_n_magic_letter,
+    ):
+        if combining_mode == "add":
+            return unique_letter_count + letter_count + n_magic_letter
+        elif combining_mode == "multiply":
+            return unique_letter_count * letter_count * n_magic_letter
+
+    @flonb.task_func()
+    def compute_total_score(
+        bonus_multiplier,
         base_score=compute_base_score,
     ):
-        return letter_count_multiplier * letter_count + base_score
+        return bonus_multiplier * base_score
 
-    result = increase_letter_count_score.compute(
-        letter_count_multiplier=3, word="banana"
+    assert (
+        compute_total_score.compute(
+            bonus_multiplier=3, word="banana", magic_letter="n", combining_mode="add"
+        )
+        == (6 + 3 + 2) * 3
     )
-    assert result == 12
+    assert (
+        compute_total_score.compute(
+            bonus_multiplier=4,
+            word="apple",
+            magic_letter="p",
+            combining_mode="multiply",
+        )
+        == (5 * 4 * 2) * 4
+    )

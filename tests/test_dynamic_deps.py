@@ -1,5 +1,7 @@
 import flonb
 
+import pytest
+
 
 def test_scaler_dep():
     @flonb.task_func()
@@ -20,6 +22,10 @@ def test_scaler_dep():
     assert exponify_by_z.compute(x=4, y=3, z=2, mode="multiply") == 144
 
 
+def test_partial():
+    raise NotImplementedError
+
+
 def test_list_deps():
     @flonb.task_func()
     def add_y(x, y):
@@ -27,14 +33,20 @@ def test_list_deps():
 
     @flonb.task_func()
     def collect(
-        container=lambda ys_range: [add_y.partial(y=y) for y in range(ys_range)],
+        container=lambda ys_range: [add_y.partial(y=y) for y in range(ys_range)]
+        + ["extra"],
     ):
         return container
 
     # Note how we don't specify `y`!
-    assert collect.compute(x=3, ys_range=5) == [3, 4, 5, 6, 7]
+    assert collect.compute(x=3, ys_range=5) == [3, 4, 5, 6, 7, "extra"]
 
 
+def test_nested_list_deps():
+    raise NotImplementedError
+
+
+@pytest.xfail()  # dicts are not parsed for tasks by dask - do we want to implement that on top?
 def test_dict_deps():
     @flonb.task_func()
     def add_y(x, y):

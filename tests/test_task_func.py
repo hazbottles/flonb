@@ -14,9 +14,17 @@ def test_signature():
     raise NotImplementedError
 
 
-def test_invalid_object_in_deps():
+def test___repr__(self):
     raise NotImplementedError
 
 
-def test___repr__(self):
+def test_missing_deep_option_raises_error():
+    raise NotImplementedError
+
+
+def test_superflous_option_raises_error():
+    raise NotImplementedError
+
+
+def test_supplied_options_collision_with_partial_options():
     raise NotImplementedError
