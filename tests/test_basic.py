@@ -1,26 +1,6 @@
 import flonb
 
 
-def test___call__():
-    @flonb.task_func()
-    def add(x, y):
-        return x + y
-
-    assert add(1, 4) == 5
-
-
-def test___call___with_dependency():
-    @flonb.task_func()
-    def str_to_int(x_str: str):
-        return int(x_str)
-
-    @flonb.task_func()
-    def add(y, x=str_to_int):
-        return x + y
-
-    assert add(2, 4) == 6
-
-
 def test_compute():
     @flonb.task_func()
     def add(x, y):
