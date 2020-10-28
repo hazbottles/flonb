@@ -1,16 +1,16 @@
 import flonb
 
 
-def test_cache_disk():
+def test_cache_disk(tmpdir):
+    flonb.set_cache_dir(tmpdir.strpath)
+
     _counts = [0]
 
     @flonb.task_func(cache_disk=True)
     def dummy_func():
         _counts[0] += 1  # side effect - if cached, won't be executed
 
-    assert not dummy_func.cached
     dummy_func.compute()
-    assert dummy_func.cached
     dummy_func.compute()
     assert _counts[0] == 1
 
@@ -18,7 +18,9 @@ def test_cache_disk():
     assert _counts[0] == 2
 
 
-def test_cache_disk_with_parameters():
+def test_cache_disk_with_options_and_deps(tmpdir):
+    flonb.set_cache_dir(tmpdir.strpath)
+
     _add_one_xs = []
     _multiply_ys = []
 

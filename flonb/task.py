@@ -1,7 +1,15 @@
 import inspect
-from typing import Dict, Tuple, Optional
+import functools
+import os
+import pickle
+from typing import Callable, Dict, Tuple, Optional
 
-import dask
+
+import dask, dask.optimization
+
+
+def set_cache_dir(dirpath: str):
+    Cache.set_dir(dirpath)
 
 
 def task_func(cache_disk=False):
@@ -13,8 +21,44 @@ def task_func(cache_disk=False):
     return decorator
 
 
+class Cache:
+    _base_dirpath: str = None
+
+    def __init__(self, category: str, key: str):
+        self.category = category
+        self.key = key
+        self.fpath = os.path.join(self._get_base_dir(), category, f"{key}.pickle")
+
+    def exists(self) -> bool:
+        return os.path.exists(self.fpath)
+
+    def read(self) -> object:
+        with open(self.fpath, "rb") as fd:
+            return pickle.load(fd)
+
+    def write(self, data: object):
+        os.makedirs(os.path.dirname(self.fpath), exist_ok=True)
+        with open(self.fpath, "wb") as fd:
+            pickle.dump(data, fd)
+
+    @classmethod
+    def set_dir(cls, dirpath: str):
+        cls._dirpath = dirpath
+
+    @classmethod
+    def _get_base_dir(cls) -> str:
+        if cls._dirpath is None:
+            raise ValueError("Set cache dir with `flonb.set_cache_dir`.")
+        return cls._dirpath
+
+
 class Task:
-    def __init__(self, func, cache_disk, presupplied_options: Optional[dict] = None):
+    def __init__(
+        self,
+        func: Callable,
+        cache_disk: bool,
+        presupplied_options: Optional[dict] = None,
+    ):
         # TODO: pass in func, deps, args?? decorator constructs class?
         # In case we want people to be able to directly construct a Task?
         self.__module__ = func.__module__
@@ -70,8 +114,34 @@ class Task:
             f"dependency args:      {list(self.deps)}"
         )
 
-    def partial(self, **kwargs):
-        return Task(self.func, self.cache_disk, presupplied_options=kwargs)
+    def _get_cache_obj(self, key: str) -> Cache:
+        return Cache(self.__name__, key)
+
+    def _get_graph_func(self, key: str) -> Callable:
+        """Returns a wrapper around self.func that handles"""
+        if not self.cache_disk:
+            return self.func
+
+        @functools.wraps(self.func)
+        def write_cache_wrapper(*args, **kwargs):
+            result = self.func(*args, **kwargs)
+            cache = self._get_cache_obj(key)
+            cache.write(result)
+            return cache.read()
+
+        return write_cache_wrapper
+
+    def _get_cache_read_func(self, key: str) -> Callable:
+        def get_cached_data(*args):
+            return self._get_cache_obj(key).read()
+
+        return get_cached_data
+
+    def _cache_exists(self, key):
+        return self._get_cache_obj(key).exists()
+
+    def partial(self, **options):
+        return Task(self.func, self.cache_disk, presupplied_options=options)
 
     def graph(self, **options):
         graph = {}  # singleton that is built throughout recursive calls
@@ -80,6 +150,7 @@ class Task:
         excess_options = set(options) - set(used_options)
         if excess_options:
             raise ValueError(f"Excess options supplied: {sorted(excess_options)}.")
+        graph, _ = dask.optimization.cull(graph, key)
         return graph, key
 
     def compute(self, **options):
@@ -87,10 +158,10 @@ class Task:
         return dask.get(graph, key)
 
 
-def _get_graph_key(task: Task, options: Dict) -> Tuple[str]:
+def _get_graph_key(task: Task, used_options: Dict) -> Tuple[str]:
     graph_key = [task.__name__]
-    for key in sorted(options):
-        graph_key.append(f"{key}={options[key]}")
+    for key in sorted(used_options):
+        graph_key.append(f"{key}={used_options[key]}")
     return tuple(graph_key)
 
 
@@ -105,7 +176,7 @@ def _build_graph(task: Task, options: dict, graph: dict):
     # See https://docs.dask.org/en/stable/graphs.html
     # build an s-expression, e.g.
     # (task.func, arg1_key, arg2_key)
-    s_expr = [task.func]
+    s_expr = []
     used_options = {}
     twice_specified_options = set(options) & set(task.presupplied_options)
     if twice_specified_options:
@@ -145,7 +216,14 @@ def _build_graph(task: Task, options: dict, graph: dict):
         else:
             raise RuntimeError(f"Internal Error - argument '{arg}' unconfigured.")
 
-    graph_key = _get_graph_key(task, {**used_options, **task.presupplied_options})
+    identifying_options = {**task.presupplied_options, **used_options}
+    graph_key = _get_graph_key(task, identifying_options)
+    if task.cache_disk and task._cache_exists(graph_key):
+        s_expr = [task._get_cache_read_func(graph_key)]
+        for opt, opt_val in identifying_options.items():
+            s_expr.append((opt, f"{opt}={opt_val}"))
+    else:
+        s_expr.insert(0, task._get_graph_func(graph_key))
     graph[graph_key] = tuple(s_expr)
 
     return used_options, graph_key
