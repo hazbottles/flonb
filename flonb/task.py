@@ -14,12 +14,24 @@ def task_func(cache_disk=False):
 
 
 class Task:
-    def __init__(self, func, cache_disk, internal_options: Optional[dict] = None):
+    def __init__(self, func, cache_disk, presupplied_options: Optional[dict] = None):
         # TODO: pass in func, deps, args?? decorator constructs class?
         # In case we want people to be able to directly construct a Task?
+        self.__module__ = func.__module__
+        self.__name__ = func.__name__
+        self.__qualname__ = func.__qualname__
+        self.__doc__ = (
+            f"This is a `flonb.Task` wrapping function {func}. Original function docstring:\n"
+            "--------------\n\n"
+            f"{func.__doc__}"
+        )
+        self.__signature__ = inspect.signature(func)
+
         self.func = func
         self.cache_disk = cache_disk
-        self.internal_options = {} if internal_options is None else internal_options
+        self.presupplied_options = (
+            {} if presupplied_options is None else presupplied_options
+        )
 
         shallow_option_names = []
         deps = {}
@@ -38,16 +50,25 @@ class Task:
         self.args_order = tuple(args_order)
         self.deps = deps
         self.shallow_option_names = shallow_option_names
-        self.__name__ = func.__name__
 
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
 
+    def __repr__(self):
+        return (
+            f"flonb.Task            {self.__name__}\n"
+            f"func:                 {self.func}\n"
+            f"cache_disk:           {self.cache_disk}\n"
+            f"presupplied_options:  {self.presupplied_options}\n"
+            f"shallow option args:  {self.shallow_option_names}\n"
+            f"dependency args:      {list(self.deps)}"
+        )
+
     def partial(self, **kwargs):
-        return Task(self.func, self.cache_disk, internal_options=kwargs)
+        return Task(self.func, self.cache_disk, presupplied_options=kwargs)
 
     def graph(self, **options):
-        graph = {}  # singleton that is built throughout recurive calls
+        graph = {}  # singleton that is built throughout recursive calls
         used_options, key = _build_graph(self, options, graph)
 
         excess_options = set(options) - set(used_options)
@@ -73,7 +94,7 @@ def _build_graph(task: Task, options: dict, graph: dict):
     # (task.func, arg1_key, arg2_key)
     s_expr = [task.func]
     used_options = {}
-    available_options = {**options, **task.internal_options}
+    available_options = {**options, **task.presupplied_options}
     for arg in task.args_order:
 
         # e.g. {("no_of_snowballs", "no_of_snowballs=10"): 10}
@@ -84,7 +105,7 @@ def _build_graph(task: Task, options: dict, graph: dict):
             s_expr.append(opt_graph_key)
             if opt_graph_key not in graph:
                 graph[opt_graph_key] = opt_val
-            if arg not in task.internal_options:
+            if arg not in task.presupplied_options:
                 used_options[arg] = opt_val
 
         elif arg in task.deps:
@@ -98,14 +119,14 @@ def _build_graph(task: Task, options: dict, graph: dict):
                 {
                     k: v
                     for k, v in dep_used_options.items()
-                    if k not in task.internal_options
+                    if k not in task.presupplied_options
                 }
             )
 
         else:
             raise RuntimeError(f"Internal Error - argument '{arg}' unconfigured.")
 
-    graph_key = _get_graph_key(task, {**used_options, **task.internal_options})
+    graph_key = _get_graph_key(task, {**used_options, **task.presupplied_options})
     graph[graph_key] = tuple(s_expr)
 
     return used_options, graph_key
