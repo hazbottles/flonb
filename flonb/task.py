@@ -51,6 +51,12 @@ class Task:
         self.deps = deps
         self.shallow_option_names = shallow_option_names
 
+        for opt, val in self.presupplied_options.items():
+            if opt not in self.shallow_option_names:
+                raise ValueError(
+                    f"Pre-supplied option '{opt}'={val} is not a valid option for '{self.__name__}'."
+                )
+
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
 
@@ -88,19 +94,32 @@ def _get_graph_key(task: Task, options: Dict) -> Tuple[str]:
     return tuple(graph_key)
 
 
+def _get_option(options: dict, opt: str):
+    """Dictionary look-up with flonb specific error message"""
+    if opt in options:
+        return options[opt]
+    raise ValueError(f"Missing option '{opt}'.")
+
+
 def _build_graph(task: Task, options: dict, graph: dict):
     # See https://docs.dask.org/en/stable/graphs.html
     # build an s-expression, e.g.
     # (task.func, arg1_key, arg2_key)
     s_expr = [task.func]
     used_options = {}
+    twice_specified_options = set(options) & set(task.presupplied_options)
+    if twice_specified_options:
+        raise ValueError(
+            f"Options {sorted(twice_specified_options)} "
+            f"have already been pre-supplied to '{task.__name__}'."
+        )
     available_options = {**options, **task.presupplied_options}
     for arg in task.args_order:
 
         # e.g. {("no_of_snowballs", "no_of_snowballs=10"): 10}
         if arg in task.shallow_option_names:
             # _add_option_to_s_expr_and_graph
-            opt_val = available_options[arg]
+            opt_val = _get_option(available_options, arg)
             opt_graph_key = (arg, f"{arg}={opt_val}")
             s_expr.append(opt_graph_key)
             if opt_graph_key not in graph:
@@ -141,7 +160,9 @@ def _add_deps_to_graph(deps, options: dict, graph: dict):
         return _build_graph(deps, options, graph)
     elif callable(deps):  # dynamic dep
         dynamic_dep_option_names = list(inspect.signature(deps).parameters)
-        deps = deps(**{opt: options[opt] for opt in dynamic_dep_option_names})
+        deps = deps(
+            **{opt: _get_option(options, opt) for opt in dynamic_dep_option_names}
+        )
         used_options, graph_key = _add_deps_to_graph(deps, options, graph)
         used_options.update({k: options[k] for k in dynamic_dep_option_names})
         return used_options, graph_key

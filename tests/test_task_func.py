@@ -1,7 +1,5 @@
 import inspect
 
-import pytest
-
 import flonb
 
 
@@ -62,28 +60,3 @@ def test___repr__():
         f"dependency args:      ['c']"
     )
     assert repr(test_func.partial(b=2)) == expected_repr
-
-
-@pytest.mark.xfail
-def test_missing_deep_option_raises_error():
-    raise NotImplementedError
-
-
-@pytest.mark.xfail
-def test_missing_option_for_dynamic_dep():
-    raise NotImplementedError
-
-
-@pytest.mark.xfail
-def test_superflous_option_raises_error():
-    raise NotImplementedError
-
-
-@pytest.mark.xfail
-def test_supplied_options_collision_with_partial_options():
-    raise NotImplementedError
-
-
-@pytest.mark.xfail
-def test_task_func_raises_error_in_compute():
-    raise NotImplementedError
