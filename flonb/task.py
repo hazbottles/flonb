@@ -5,7 +5,8 @@ import pickle
 from typing import Callable, Dict, Tuple, Optional
 
 
-import dask, dask.optimization
+import dask
+import dask.optimization
 
 
 def set_cache_dir(dirpath: str):

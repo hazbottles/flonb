@@ -5,7 +5,7 @@ set -ex
 if [ -d "./testenv" ]; then
   rm -rf ./testenv
 fi
-python -m venv testenv  # NB what if testenv already exists?
+python -m venv testenv
 source ./testenv/bin/activate
 
 pip install .
