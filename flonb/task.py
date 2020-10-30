@@ -13,13 +13,16 @@ def set_cache_dir(dirpath: str):
     Cache.set_dir(dirpath)
 
 
-def task_func(cache_disk=False):
+def task_func(func=None, *, cache_disk=False):
     """Decorator to convert function to a `flonb.Task`"""
 
     def decorator(func) -> Task:
         return Task(func, cache_disk=cache_disk)
 
-    return decorator
+    if func is None:
+        return decorator
+    else:
+        return decorator(func)
 
 
 class Cache:

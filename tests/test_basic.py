@@ -9,6 +9,20 @@ def test_compute():
     assert add.compute(x=3, y=4) == 7
 
 
+def test_uncalled_task_func_decorator():
+    @flonb.task_func  # NOT @flonb.task_func()
+    def add(x, y):
+        return x + y
+
+    assert add.compute(x=3, y=4) == 7
+
+    @flonb.task_func()
+    def add2(x, y):
+        return x + y
+
+    assert add2.compute(x=3, y=4) == 7
+
+
 def test_compute_with_dependency():
     @flonb.task_func()
     def compute_letter_count(word):
