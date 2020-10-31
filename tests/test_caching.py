@@ -1,4 +1,19 @@
+import pytest
+
 import flonb
+from flonb.task import Cache
+
+
+def test_set_cache_dir():
+    Cache._reset()
+
+    @flonb.task_func(cache_disk=True)
+    def test_func():
+        pass
+
+    with pytest.raises(ValueError) as excinfo:
+        test_func.compute()
+    assert "Set cache dir with `flonb.set_cache_dir`." in str(excinfo)
 
 
 def test_cache_disk(tmpdir):

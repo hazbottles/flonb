@@ -47,13 +47,17 @@ class Cache:
 
     @classmethod
     def set_dir(cls, dirpath: str):
-        cls._dirpath = dirpath
+        cls._base_dirpath = dirpath
 
     @classmethod
     def _get_base_dir(cls) -> str:
-        if cls._dirpath is None:
+        if cls._base_dirpath is None:
             raise ValueError("Set cache dir with `flonb.set_cache_dir`.")
-        return cls._dirpath
+        return cls._base_dirpath
+
+    @classmethod
+    def _reset(cls):
+        cls._base_dirpath = None
 
 
 class Task:
@@ -164,8 +168,10 @@ class Dep:
     def __init__(self, dep):
         self.dep = dep
 
-    def repr(self):
-        return f"flonb.Dep({self.dep})"
+    def __repr__(self):
+        dep = self.dep
+        dep_str = dep.__name__ if isinstance(dep, Task) else dep
+        return f"flonb.Dep({dep_str})"
 
 
 class DynamicDep:
@@ -183,7 +189,7 @@ class DynamicDep:
             )
         )
 
-    def repr(self):
+    def __repr__(self):
         return f"flonb.DynamicDep(options={self.option_names})"
 
 
@@ -234,8 +240,6 @@ def _build_graph(task: Task, options: dict, graph: dict):
             )
             s_expr.append(dep_keys)
             used_options.update(dep_used_options)
-        else:
-            raise RuntimeError(f"Internal Error - argument '{arg}' unconfigured.")
 
     identifying_options = {**task.presupplied_options, **used_options}
     graph_key = _get_graph_key(task, identifying_options)

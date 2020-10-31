@@ -60,3 +60,21 @@ def test___repr__():
         f"dependency args:      ['c']"
     )
     assert repr(test_func.partial(b=2)) == expected_repr
+
+
+def test_Dep_repr():
+    @flonb.task_func()
+    def test_func(d):
+        pass
+
+    dep = flonb.Dep(test_func)
+    assert repr(dep) == "flonb.Dep(test_func)"
+
+
+def test_DynamicDep_repr():
+    @flonb.task_func()
+    def test_func(a):
+        pass
+
+    dep = flonb.DynamicDep(lambda cow, frog: test_func)
+    assert repr(dep) == "flonb.DynamicDep(options=['cow', 'frog'])"
