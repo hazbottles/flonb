@@ -99,12 +99,6 @@ class Task:
         self.deps = deps
         self.shallow_option_names = shallow_option_names
 
-        for opt, val in self.presupplied_options.items():
-            if opt not in self.shallow_option_names:
-                raise ValueError(
-                    f"Pre-supplied option '{opt}'={val} is not a valid option for '{self.__name__}'."
-                )
-
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
 
@@ -199,8 +193,7 @@ def _build_graph(task: Task, options: dict, graph: dict):
             s_expr.append(opt_graph_key)
             if opt_graph_key not in graph:
                 graph[opt_graph_key] = opt_val
-            if arg not in task.presupplied_options:
-                used_options[arg] = opt_val
+            used_options[arg] = opt_val
 
         elif arg in task.deps:
             # step through all the deps,
@@ -222,6 +215,14 @@ def _build_graph(task: Task, options: dict, graph: dict):
     else:
         s_expr.insert(0, task._get_graph_func(graph_key))
     graph[graph_key] = tuple(s_expr)
+
+    for presupplied_opt, presupplied_opt_val in task.presupplied_options.items():
+        if presupplied_opt not in used_options:
+            raise ValueError(
+                f"Pre-supplied option '{presupplied_opt}'={presupplied_opt_val} "
+                f"to task '{task.__name__}' was unused."
+            )
+        del used_options[presupplied_opt]
 
     return used_options, graph_key
 

@@ -35,6 +35,18 @@ def test_partial_options_do_not_propogate_outwards():
     assert add_to_3.compute(x=2) == 5
 
 
+def test_partial_option_supplied_that_is_used_deeper_in_chain():
+    @flonb.task_func()
+    def add(x, y):
+        return x + y
+
+    @flonb.task_func()
+    def multiply(z, base=add):
+        return base * z
+
+    assert multiply.partial(x=3).compute(y=2, z=4) == 20
+
+
 def test_list_deps():
     @flonb.task_func()
     def add_y(x, y):

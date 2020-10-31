@@ -43,12 +43,10 @@ def test_supplied_options_collision_with_partial_options():
     assert "Options ['a'] have already been pre-supplied to 'parent'." in str(excinfo)
 
 
-def test_bad_partial_option():
+def test_unused_partial_options():
     with pytest.raises(ValueError) as excinfo:
-        child.partial(a=2).compute(b=2, c=3)
-    assert "Pre-supplied option 'a'=2 is not a valid option for 'child'." in str(
-        excinfo
-    )
+        child.partial(f=2).compute(a=2, b=4, c=3)
+    assert "Pre-supplied option 'f'=2 to task 'child' was unused." in str(excinfo)
 
 
 def test_missing_option_for_dynamic_dep():
