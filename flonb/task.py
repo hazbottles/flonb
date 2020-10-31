@@ -194,10 +194,10 @@ class DynamicDep:
 
 
 def _get_graph_key(task: Task, used_options: Dict) -> Tuple[str]:
-    graph_key = [task.__name__]
+    option_strs = []
     for key in sorted(used_options):
-        graph_key.append(f"{key}={used_options[key]}")
-    return tuple(graph_key)
+        option_strs.append(f"{key}={used_options[key]}")
+    return tuple([task.__name__, ", ".join(option_strs)])
 
 
 def _get_option(options: dict, opt: str):
