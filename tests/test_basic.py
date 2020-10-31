@@ -29,7 +29,7 @@ def test_compute_with_dependency():
         return len(word)
 
     @flonb.task_func()
-    def muliply_letter_count(x, letter_count=compute_letter_count):
+    def muliply_letter_count(x, letter_count=flonb.Dep(compute_letter_count)):
         return letter_count * x
 
     assert muliply_letter_count.compute(x=5, word="cow") == 15
@@ -55,9 +55,9 @@ def test_compute_with_dependency_chain():
     @flonb.task_func()
     def compute_base_score(
         combining_mode,
-        unique_letter_count=compute_unique_letter_count,
-        letter_count=compute_letter_count,
-        n_magic_letter=compute_n_magic_letter,
+        unique_letter_count=flonb.Dep(compute_unique_letter_count),
+        letter_count=flonb.Dep(compute_letter_count),
+        n_magic_letter=flonb.Dep(compute_n_magic_letter),
     ):
         if combining_mode == "add":
             return unique_letter_count + letter_count + n_magic_letter
@@ -67,7 +67,7 @@ def test_compute_with_dependency_chain():
     @flonb.task_func()
     def compute_total_score(
         bonus_multiplier,
-        base_score=compute_base_score,
+        base_score=flonb.Dep(compute_base_score),
     ):
         return bonus_multiplier * base_score
 

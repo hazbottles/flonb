@@ -30,12 +30,12 @@ def test_cache_disk_with_options_and_deps(tmpdir):
         return x + 1
 
     @flonb.task_func(cache_disk=True)
-    def multiply(y, base=add_one):
+    def multiply(y, base=flonb.Dep(add_one)):
         _multiply_ys.append(y)
         return base * y
 
     @flonb.task_func(cache_disk=True)
-    def add_z(z, base=multiply):
+    def add_z(z, base=flonb.Dep(multiply)):
         return base + z
 
     assert multiply.compute(x=3, y=2) == 8

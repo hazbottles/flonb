@@ -14,7 +14,10 @@ def test_scaler_dep():
 
     @flonb.task_func()
     def exponify_by_z(
-        z, base=lambda mode: {"add": add_y, "multiply": multiply_by_y}[mode]
+        z,
+        base=flonb.DynamicDep(
+            lambda mode: {"add": add_y, "multiply": multiply_by_y}[mode]
+        ),
     ):
         return base ** z
 
@@ -28,7 +31,7 @@ def test_partial_options_do_not_propogate_outwards():
         return x + y
 
     @flonb.task_func()
-    def add_to_3(base=lambda: add.partial(y=3)):
+    def add_to_3(base=flonb.Dep(add.partial(y=3))):
         return base
 
     assert add_to_3.graph(x=2)[1] == ("add_to_3", "x=2")  # no "y=3"!
@@ -41,7 +44,7 @@ def test_partial_option_supplied_that_is_used_deeper_in_chain():
         return x + y
 
     @flonb.task_func()
-    def multiply(z, base=add):
+    def multiply(z, base=flonb.Dep(add)):
         return base * z
 
     assert multiply.partial(x=3).compute(y=2, z=4) == 20
@@ -54,7 +57,9 @@ def test_list_deps():
 
     @flonb.task_func()
     def collect(
-        container=lambda ys_range: ([add_y.partial(y=y) for y in range(ys_range)]),
+        container=flonb.DynamicDep(
+            lambda ys_range: ([add_y.partial(y=y) for y in range(ys_range)])
+        ),
     ):
         return container
 
@@ -68,11 +73,13 @@ def test_nested_list_deps():
 
     @flonb.task_func()
     def collect(
-        container=lambda ys_range, xs_range: (
-            [
-                [multiply.partial(x=x, y=y + 2) for x in range(xs_range)]
-                for y in range(ys_range)
-            ]
+        container=flonb.DynamicDep(
+            lambda ys_range, xs_range: (
+                [
+                    [multiply.partial(x=x, y=y + 2) for x in range(xs_range)]
+                    for y in range(ys_range)
+                ]
+            )
         ),
     ):
         return container

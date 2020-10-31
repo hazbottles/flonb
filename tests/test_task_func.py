@@ -17,7 +17,7 @@ def test___call___with_dependency():
         return int(x_str)
 
     @flonb.task_func()
-    def add(y, x=str_to_int):
+    def add(y, x=flonb.Dep(str_to_int)):
         return x + y
 
     assert add(2, 4) == 6
@@ -47,7 +47,7 @@ def test___repr__():
         pass
 
     @flonb.task_func()
-    def test_func(a, b, c=dependency_func):
+    def test_func(a, b, c=flonb.Dep(dependency_func)):
         """This is the docstring for `test_func`."""
         pass
 

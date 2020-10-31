@@ -9,7 +9,7 @@ def parent(a, b):
 
 
 @flonb.task_func()
-def child(c, adult=parent):
+def child(c, adult=flonb.Dep(parent)):
     pass
 
 
@@ -51,7 +51,9 @@ def test_unused_partial_options():
 
 def test_missing_option_for_dynamic_dep():
     @flonb.task_func()
-    def dynamic(person=lambda mode: child if mode == "child" else parent):
+    def dynamic(
+        person=flonb.DynamicDep(lambda mode: child if mode == "child" else parent),
+    ):
         pass
 
     with pytest.raises(ValueError) as excinfo:
@@ -68,7 +70,7 @@ def test_task_func_raises_error_in_compute():
         raise MyError
 
     @flonb.task_func()
-    def test_func(dep=raises_error):
+    def test_func(dep=flonb.Dep(raises_error)):
         pass
 
     with pytest.raises(MyError):

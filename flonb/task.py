@@ -87,11 +87,15 @@ class Task:
         for param_name, param_obj in inspect.signature(func).parameters.items():
             args_order.append(param_name)
             default_val = param_obj.default
-            if isinstance(default_val, Task):
+            if isinstance(default_val, Dep):
                 deps[param_name] = default_val
-            elif (default_val is not inspect.Parameter.empty) and callable(default_val):
+            elif isinstance(default_val, DynamicDep):
                 deps[param_name] = default_val
-                shallow_option_names += list(inspect.signature(default_val).parameters)
+                shallow_option_names += [
+                    opt
+                    for opt in default_val.option_names
+                    if opt not in shallow_option_names
+                ]
             else:
                 shallow_option_names.append(param_name)
 
@@ -154,6 +158,33 @@ class Task:
     def compute(self, **options):
         graph, key = self.graph(**options)
         return dask.get(graph, key)
+
+
+class Dep:
+    def __init__(self, dep):
+        self.dep = dep
+
+    def repr(self):
+        return f"flonb.Dep({self.dep})"
+
+
+class DynamicDep:
+    def __init__(self, dynamic_dep: Callable):
+        self.dynamic_dep = dynamic_dep
+        self.option_names = list(inspect.signature(dynamic_dep).parameters)
+
+    def get_dep(self, available_options):
+        return Dep(
+            self.dynamic_dep(
+                **{
+                    opt: _get_option(available_options, opt)
+                    for opt in self.option_names
+                }
+            )
+        )
+
+    def repr(self):
+        return f"flonb.DynamicDep(options={self.option_names})"
 
 
 def _get_graph_key(task: Task, used_options: Dict) -> Tuple[str]:
@@ -234,14 +265,6 @@ def _add_deps_to_graph(deps, options: dict, graph: dict):
     """
     if isinstance(deps, Task):
         return _build_graph(deps, options, graph)
-    elif callable(deps):  # dynamic dep
-        dynamic_dep_option_names = list(inspect.signature(deps).parameters)
-        deps = deps(
-            **{opt: _get_option(options, opt) for opt in dynamic_dep_option_names}
-        )
-        used_options, graph_key = _add_deps_to_graph(deps, options, graph)
-        used_options.update({k: options[k] for k in dynamic_dep_option_names})
-        return used_options, graph_key
     elif isinstance(deps, list):
         used_options = {}
         s_expr = []
@@ -252,5 +275,13 @@ def _add_deps_to_graph(deps, options: dict, graph: dict):
             used_options.update(this_dep_used_opts)
             s_expr.append(this_dep_graph_key)
         return used_options, s_expr
+    elif isinstance(deps, Dep):
+        return _add_deps_to_graph(deps.dep, options, graph)
+    elif isinstance(deps, DynamicDep):
+        used_options, graph_key = _add_deps_to_graph(
+            deps.get_dep(options), options, graph
+        )
+        used_options.update({k: options[k] for k in deps.option_names})
+        return used_options, graph_key
     else:
         return {}, deps
