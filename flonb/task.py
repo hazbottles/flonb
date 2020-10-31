@@ -149,7 +149,7 @@ class Task:
     def partial(self, **options):
         return Task(self.func, self.cache_disk, presupplied_options=options)
 
-    def graph(self, **options):
+    def graph_and_key(self, **options):
         graph = {}  # singleton that is built throughout recursive calls
         used_options, key = _build_graph(self, options, graph)
 
@@ -160,7 +160,7 @@ class Task:
         return graph, key
 
     def compute(self, **options):
-        graph, key = self.graph(**options)
+        graph, key = self.graph_and_key(**options)
         return dask.get(graph, key)
 
 

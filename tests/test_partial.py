@@ -10,7 +10,7 @@ def test_partial_options_do_not_propogate_outwards():
     def add_to_3(base=flonb.Dep(add.partial(y=3))):
         return base
 
-    assert add_to_3.graph(x=2)[1] == ("add_to_3", "x=2")  # no "y=3"!
+    assert add_to_3.graph_and_key(x=2)[1] == ("add_to_3", "x=2")  # no "y=3"!
     assert add_to_3.compute(x=2) == 5
 
 
