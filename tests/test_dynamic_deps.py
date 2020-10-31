@@ -22,6 +22,19 @@ def test_scaler_dep():
     assert exponify_by_z.compute(x=4, y=3, z=2, mode="multiply") == 144
 
 
+def test_partial_options_do_not_propogate_outwards():
+    @flonb.task_func()
+    def add(x, y):
+        return x + y
+
+    @flonb.task_func()
+    def add_to_3(base=lambda: add.partial(y=3)):
+        return base
+
+    assert add_to_3.graph(x=2)[1] == ("add_to_3", "x=2")  # no "y=3"!
+    assert add_to_3.compute(x=2) == 5
+
+
 def test_list_deps():
     @flonb.task_func()
     def add_y(x, y):

@@ -209,14 +209,7 @@ def _build_graph(task: Task, options: dict, graph: dict):
                 task.deps[arg], available_options, graph
             )
             s_expr.append(dep_keys)
-            used_options.update(
-                {
-                    k: v
-                    for k, v in dep_used_options.items()
-                    if k not in task.presupplied_options
-                }
-            )
-
+            used_options.update(dep_used_options)
         else:
             raise RuntimeError(f"Internal Error - argument '{arg}' unconfigured.")
 
