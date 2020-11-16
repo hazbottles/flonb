@@ -2,11 +2,11 @@
 
 [![Build Status](https://github.com/hazbottles/flonb/workflows/build/badge.svg)](https://github.com/hazbottles/flonb/actions?query=workflow%3Abuild)
 
-`flonb` lets you develop data pipelines (a.k.a task graphs) with very rapid "modify -> run -> inpect" iteration loops.
+`flonb` lets you develop data pipelines (a.k.a task graphs) with very rapid "modify -> run -> inspect" iteration loops.
 
 It lets you:
-- __Label__ each run of the pipetline with a human-readable list of options. Easy to see what you did to the data, easy to reproduce. Avoid the hell of _I-changed-a-whole-bunch-of-options-and-lost-track_ that I, at least, often get myself into.
-- __Cache__ results automagically based on the labels. Change an option, add a new option - `flonb` will manage the cache without you having to implement code to update the unique result identifier!
+- __Label__ each run of the pipeline with a human-readable list of options. Easy to see what you did to the data, easy to reproduce.
+- __Cache__ results automagically based on the labels. Change an option, add a new option - `flonb` will manage the cache without extra boilerplate!
 - __Parallel__ execution of your pipeline. `flonb` pipelines are interoperable with [dask](https://docs.dask.org/en/latest/) schedulers.
 
 So you can spend more time focussing on your logic, and less time on error-prone boilerplate code.
@@ -49,22 +49,8 @@ def word_count(word, text=flonb.Dep(parse_text)):
     return sum([w == word for w in text])
 ```
 
-You can still run your pipeline by manually calling the functions the usual way. This can be handy for debugging:
 
-
-```python
-text = parse_text(normalise=False)
-word_count(word="badger", text=text)
-```
-
-
-
-
-    6
-
-
-
-Or you can use the `.compute` method that `@flonb.task_func` adds to your function.
+Run the Task Graph using the `.compute` method that `@flonb.task_func` adds to your function.
 
 Note that we supply all the options that specify the entire Task Graph. Even though the function `word_count` does not explicitly require the option `normalise`, its dependency `parse_text` does.
 
@@ -73,11 +59,18 @@ Note that we supply all the options that specify the entire Task Graph. Even tho
 word_count.compute(normalise=False, word="badger")
 ```
 
-
-
-
     6
 
+
+You can still run your pipeline by manually calling the functions the usual way. This can be handy for debugging:
+
+
+```python
+text = parse_text(normalise=False)
+word_count(word="badger", text=text)
+```
+
+    6
 
 
 Change the options, and everything works like you'd expect.
@@ -86,9 +79,6 @@ Change the options, and everything works like you'd expect.
 ```python
 word_count.compute(normalise=True, word="badger")
 ```
-
-
-
 
     9
 
@@ -131,10 +121,6 @@ graph, key = word_count.graph_and_key(normalise=False, word="badger")
 dask.visualize(graph)
 ```
 
-
-
-
-
 ![png](./docs/output_17_0.png)
 
 
@@ -159,9 +145,6 @@ def count_many_words(
 count_many_words.compute(normalise=False)
 ```
 
-
-
-
     [6, 2]
 
 
@@ -183,9 +166,6 @@ def count_many_words_heterogenous_nested_list(
 
 count_many_words_heterogenous_nested_list.compute(normalise=True)
 ```
-
-
-
 
     [['badger', 9], ['mushroom', 4], ['snake', 2], ['cow', 0]]
 
@@ -218,13 +198,6 @@ power.compute(x=3, y=3)
 
 
 
-
-
-    27
-
-
-
-
 ```python
 # each unique set of options labels the cache
 power.compute(x=3, y=2)
@@ -236,17 +209,9 @@ power.compute(x=2, y=3)
 
 
 
-
-
-    8
-
-
-
 # Dynamic dependencies
 
 Sometimes you want to know the value of an option before you resolve the dependencies. `flonb.DynamicDep` has your back here.
-
-
 
 
 ```python
@@ -272,9 +237,6 @@ Here the option `'mode'` determines what the task graph looks like, and even wha
 multiply_or_add.compute(mode="multiply", a=4, b=3)
 ```
 
-
-
-
     12
 
 
@@ -283,9 +245,6 @@ multiply_or_add.compute(mode="multiply", a=4, b=3)
 ```python
 multiply_or_add.compute(mode="add", x=4, y=3)
 ```
-
-
-
 
     7
 
