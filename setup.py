@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="flonb",
-    version="0.1.0",  # make sure to also update in ./flonb/__init__.py
+    version="0.1.1",  # make sure to also update in ./flonb/__init__.py
     author="hazbottles",
     description="Rapid-iteration data pipelines with automagic caching + parameter passing.",
     long_description=long_description,
