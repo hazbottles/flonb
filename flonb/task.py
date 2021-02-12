@@ -1,5 +1,6 @@
 import inspect
 import functools
+import hashlib
 import os
 import pickle
 from typing import Callable, Dict, Tuple, Optional
@@ -31,19 +32,25 @@ class Cache:
     def __init__(self, category: str, key: str):
         self.category = category
         self.key = key
-        self.fpath = os.path.join(self._get_base_dir(), category, f"{key}.pickle")
+        fname = hashlib.md5(str(key).encode()).hexdigest()
+        self.fpath = os.path.join(
+            self._get_base_dir(), category, f"{fname}.pickle"
+        )
 
     def exists(self) -> bool:
         return os.path.exists(self.fpath)
 
     def read(self) -> object:
+        print(f"READING CACHE for {self.key} at {self.fpath}")
         with open(self.fpath, "rb") as fd:
             return pickle.load(fd)
 
     def write(self, data: object):
+        print(f"WRITING CACHE for {self.key} to {self.fpath}")
         os.makedirs(os.path.dirname(self.fpath), exist_ok=True)
         with open(self.fpath, "wb") as fd:
             pickle.dump(data, fd)
+        print(f"WROTE CACHE for {self.key} to {self.fpath}")
 
     @classmethod
     def set_dir(cls, dirpath: str):
@@ -125,12 +132,20 @@ class Task:
 
     def _get_graph_func(self, key: str) -> Callable:
         """Returns a wrapper around self.func that handles"""
+
+        @functools.wraps(self.func)
+        def _graph_func_wrapper(*args, **kwargs):
+            print(f"RUNNING {key}")
+            result = self.func(*args, **kwargs)
+            print(f"DONE {key}")
+            return result
+
         if not self.cache_disk:
-            return self.func
+            return _graph_func_wrapper
 
         @functools.wraps(self.func)
         def write_cache_wrapper(*args, **kwargs):
-            result = self.func(*args, **kwargs)
+            result = _graph_func_wrapper(*args, **kwargs)
             cache = self._get_cache_obj(key)
             cache.write(result)
             return cache.read()
