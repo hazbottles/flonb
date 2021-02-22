@@ -1,6 +1,7 @@
 import inspect
 import functools
 import hashlib
+import logging
 import os
 import pickle
 from typing import Callable, Dict, Tuple, Optional
@@ -8,6 +9,8 @@ from typing import Callable, Dict, Tuple, Optional
 
 import dask
 import dask.optimization
+
+_logger = logging.getLogger("flonb")
 
 
 def set_cache_dir(dirpath: str):
@@ -33,24 +36,22 @@ class Cache:
         self.category = category
         self.key = key
         fname = hashlib.md5(str(key).encode()).hexdigest()
-        self.fpath = os.path.join(
-            self._get_base_dir(), category, f"{fname}.pickle"
-        )
+        self.fpath = os.path.join(self._get_base_dir(), category, f"{fname}.pickle")
 
     def exists(self) -> bool:
         return os.path.exists(self.fpath)
 
     def read(self) -> object:
-        print(f"READING CACHE for {self.key} at {self.fpath}")
+        _logger.info(f"READING CACHE for {self.key} at {self.fpath}")
         with open(self.fpath, "rb") as fd:
             return pickle.load(fd)
 
     def write(self, data: object):
-        print(f"WRITING CACHE for {self.key} to {self.fpath}")
+        _logger.info(f"WRITING CACHE for {self.key} to {self.fpath}")
         os.makedirs(os.path.dirname(self.fpath), exist_ok=True)
         with open(self.fpath, "wb") as fd:
             pickle.dump(data, fd)
-        print(f"WROTE CACHE for {self.key} to {self.fpath}")
+        _logger.info(f"WROTE CACHE for {self.key} to {self.fpath}")
 
     @classmethod
     def set_dir(cls, dirpath: str):
@@ -131,13 +132,13 @@ class Task:
         return Cache(self.__name__, key)
 
     def _get_graph_func(self, key: str) -> Callable:
-        """Returns a wrapper around self.func that handles"""
+        """Returns a wrapper around self.func that handles writing to cache"""
 
         @functools.wraps(self.func)
         def _graph_func_wrapper(*args, **kwargs):
-            print(f"RUNNING {key}")
+            _logger.info(f"RUNNING {key}")
             result = self.func(*args, **kwargs)
-            print(f"DONE {key}")
+            _logger.info(f"DONE {key}")
             return result
 
         if not self.cache_disk:
