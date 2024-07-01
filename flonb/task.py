@@ -230,7 +230,8 @@ def _build_graph(task: Task, options: dict, graph: dict):
     # (task.func, arg1_key, arg2_key)
     s_expr = []
     used_options = {}
-    available_options = _check_and_combine_options(task, options)
+    # pre-supplied options take precedence
+    available_options = {**options, **task.presupplied_options}
     for arg in task.args_order:
 
         # e.g. {("no_of_snowballs", "no_of_snowballs=10"): 10}

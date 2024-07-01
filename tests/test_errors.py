@@ -40,7 +40,7 @@ def test_dependency_supplied_to_compute_raises_error():
 def test_supplied_options_collision_with_partial_options():
     with pytest.raises(ValueError) as excinfo:
         parent.partial(a=2).compute(a=2, b=4)
-    assert "Options ['a'] have already been pre-supplied to 'parent'." in str(excinfo)
+    assert "Excess options supplied: ['a']." in str(excinfo.value)
 
 
 def test_unused_partial_options():
