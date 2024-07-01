@@ -24,3 +24,12 @@ def test_partial_option_supplied_that_is_used_deeper_in_chain():
         return base * z
 
     assert multiply.partial(x=3).compute(y=2, z=4) == 20
+
+
+def test_multiple_applications_of_partial():
+
+    @flonb.task_func
+    def add(a, b):
+        return a + b
+
+    assert 5 == add.partial(a=3).partial(b=2).compute()
