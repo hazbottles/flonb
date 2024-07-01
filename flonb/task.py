@@ -163,6 +163,7 @@ class Task:
         return self._get_cache_obj(key).exists()
 
     def partial(self, **options):
+        options = _check_and_combine_options(self, options)
         return Task(self.func, self.cache_disk, presupplied_options=options)
 
     def graph_and_key(self, **options):
@@ -229,13 +230,7 @@ def _build_graph(task: Task, options: dict, graph: dict):
     # (task.func, arg1_key, arg2_key)
     s_expr = []
     used_options = {}
-    twice_specified_options = set(options) & set(task.presupplied_options)
-    if twice_specified_options:
-        raise ValueError(
-            f"Options {sorted(twice_specified_options)} "
-            f"have already been pre-supplied to '{task.__name__}'."
-        )
-    available_options = {**options, **task.presupplied_options}
+    available_options = _check_and_combine_options(task, options)
     for arg in task.args_order:
 
         # e.g. {("no_of_snowballs", "no_of_snowballs=10"): 10}
@@ -305,3 +300,13 @@ def _add_deps_to_graph(deps, options: dict, graph: dict):
         return used_options, graph_key
     else:
         return {}, deps
+
+
+def _check_and_combine_options(task, options):
+    twice_specified_options = set(task.presupplied_options) & set(options)
+    if twice_specified_options:
+        raise ValueError(
+            f"Options {sorted(twice_specified_options)} "
+            f"have already been pre-supplied to '{task.__name__}'."
+        )
+    return {**task.presupplied_options, **options}
