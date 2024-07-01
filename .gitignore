@@ -1,2 +1,3 @@
 *.pyc
 .coverage
+flonb.egg-info

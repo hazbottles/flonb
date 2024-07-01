@@ -17,7 +17,7 @@ def test_scaler_dep():
             lambda mode: {"add": add_y, "multiply": multiply_by_y}[mode]
         ),
     ):
-        return base ** z
+        return base**z
 
     assert exponify_by_z.compute(x=4, y=3, z=3, mode="add") == 343
     assert exponify_by_z.compute(x=4, y=3, z=2, mode="multiply") == 144
