@@ -11,20 +11,16 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.12']
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
-        python-version: |
-          3.8
-          3.12
-    - name: Update pip
-      run: |
-        python -m pip install --upgrade pip
+        python-version: ${{ matrix.python-version }}
     - name: Run ci tests
-      run: |
-        bash ./scripts/ci.sh
+      run: bash ./scripts/ci.sh
