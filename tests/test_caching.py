@@ -67,3 +67,19 @@ def test_cache_disk_with_options_and_deps(tmpdir):
 
     assert _add_one_xs == [3, 2, 5, 2, 1]
     assert _multiply_ys == [2, 3, 3, 2, 4]
+
+
+def test_cache_disk_with_dict_param(tmpdir):
+
+    calls = []
+    flonb.set_cache_dir(tmpdir.strpath)
+
+    @flonb.task_func(cache_disk=True)
+    def my_task(a):
+        calls.append(a)
+
+    my_task.compute(a={"bananas": 2, "cow": 3})
+    my_task.compute(a={"cow": 3, "bananas": 2})
+
+    # i.e. only called once
+    assert calls == [{"cow": 3, "bananas": 2}]

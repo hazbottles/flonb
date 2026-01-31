@@ -37,3 +37,16 @@ def test_list_deps():
         return container
 
     assert collect.compute(x=3, ys_range=5) == [3, 4, 5, 6, 7]
+
+
+@flonb.task_func
+def test_dict_deps():
+    @flonb.task_func
+    def add_one(a):
+        return a + 1
+
+    @flonb.task_func
+    def my_task2(res=flonb.Dep({"add_one": add_one})):
+        return res
+
+    assert {"a": 3} == my_task2.compute(a=2)

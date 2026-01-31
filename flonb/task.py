@@ -291,6 +291,17 @@ def _add_deps_to_graph(deps, options: dict, graph: dict):
             used_options.update(this_dep_used_opts)
             s_expr.append(this_dep_graph_key)
         return used_options, s_expr
+    elif isinstance(deps, dict):
+        used_options = {}
+        s_expr = {}
+        for k, d in deps.items():
+            this_dep_used_opts, this_dep_graph_key = _add_deps_to_graph(
+                d, options, graph
+            )
+            used_options.update(this_dep_used_opts)
+            s_expr[k] = this_dep_graph_key
+        return used_options, s_expr
+
     elif isinstance(deps, Dep):
         return _add_deps_to_graph(deps.dep, options, graph)
     elif isinstance(deps, DynamicDep):

@@ -1,5 +1,3 @@
-import pytest
-
 import flonb
 
 
@@ -52,7 +50,14 @@ def test_heterogenous_deps():
     ]
 
 
-@pytest.mark.xfail  # dicts are not parsed for tasks by dask - do we want to implement that on top?
+def test_dict_deps_simple():
+    @flonb.task_func
+    def my_task(a):
+        return {k: v + 1 for k, v in a.items()}
+
+    assert my_task.compute(a={"bananas": 2}) == {"bananas": 3}
+
+
 def test_dict_deps():
     @flonb.task_func()
     def add_y(x, y):
@@ -60,10 +65,9 @@ def test_dict_deps():
 
     @flonb.task_func()
     def collect(
-        container={y + 10: add_y.partial(y=y) for y in range(5)},
+        container=flonb.Dep({y + 10: add_y.partial(y=y) for y in range(5)}),
     ):
         return container
 
-    # Note how we don't specify `y`!
     result = collect.compute(x=3)
     assert result == {13: 3, 14: 4, 15: 5, 16: 6, 17: 7}
